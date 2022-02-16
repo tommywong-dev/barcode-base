@@ -24,7 +24,9 @@ const Home: NextPage = () => {
       flexDir="column"
       height="100vh"
     >
-      <Text fontSize="4xl">Kindly log in to use the app</Text>
+      <Text fontSize="4xl" padding="10" textAlign="center">
+        Kindly log in to use the app
+      </Text>
       <Button
         variant="solid"
         colorScheme="blue"

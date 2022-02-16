@@ -151,18 +151,23 @@ const BarcodeList = () => {
         divider={<Divider />}
         align="start"
         padding="5"
+        paddingBottom="24"
         width="100%"
         className="justify-start"
       >
-        {barcodes.map(({ name, barcode, timestamp }) => (
-          <Stat key={barcode}>
-            <StatLabel>{name}</StatLabel>
-            <StatNumber>{barcode}</StatNumber>
-            <StatHelpText>
-              {moment(timestamp).format(TIME_FORMAT.VERBOSE)}
-            </StatHelpText>
-          </Stat>
-        ))}
+        {barcodes.length ? (
+          barcodes.map(({ name, barcode, timestamp }) => (
+            <Stat key={barcode}>
+              <StatLabel>{name}</StatLabel>
+              <StatNumber>{barcode}</StatNumber>
+              <StatHelpText>
+                {moment(timestamp).format(TIME_FORMAT.VERBOSE)}
+              </StatHelpText>
+            </Stat>
+          ))
+        ) : (
+          <Text fontSize="2xl">No Records</Text>
+        )}
       </VStack>
     </VStack>
   );

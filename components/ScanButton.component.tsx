@@ -75,7 +75,7 @@ const ScanButton = () => {
         as={Button}
         variant="solid"
         colorScheme="blue"
-        position="absolute"
+        position="fixed"
         width="full"
         maxWidth={300}
         bottom={0}
