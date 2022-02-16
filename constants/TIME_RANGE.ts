@@ -1,0 +1,7 @@
+export const TIME_RANGE = {
+  TODAY: "TODAY",
+  THIS_WEEK: "THIS WEEK",
+  THIS_MONTH: "THIS MONTH",
+  THIS_YEAR: "THIS YEAR",
+  ALL_TIME: "ALL TIME",
+};
