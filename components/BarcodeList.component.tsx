@@ -145,6 +145,7 @@ const BarcodeList = () => {
             ))}
           </MenuList>
         </Menu>
+        <Text marginX="1rem">Results: {barcodes.length}</Text>
       </HStack>
 
       <VStack

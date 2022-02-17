@@ -10,14 +10,13 @@ import {
 import { db } from ".";
 import { BarcodeData } from "../interfaces/Barcode.interface";
 import { DbUser } from "../interfaces/DbUser.interface";
-import { getRandomAvatar } from "../utils/randomAvatar";
 
 export const createUser = async (user: User) => {
   const { displayName, email, photoURL, uid } = user;
   const dbUser: DbUser = {
     displayName: displayName || "",
     email: email || "",
-    photoURL: photoURL || getRandomAvatar(uid),
+    photoURL: photoURL || "",
     uid,
   };
 
