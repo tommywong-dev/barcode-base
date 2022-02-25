@@ -2,6 +2,7 @@ import { Box, Button, Text } from "@chakra-ui/react";
 import type { NextPage } from "next";
 import React from "react";
 import BarcodeList from "../components/BarcodeList.component";
+import LogoComponent from "../components/Logo.component";
 import ScanButton from "../components/ScanButton.component";
 import Topbar from "../components/Topbar.component";
 import { signInGoogle } from "../firebase/auth";
@@ -24,7 +25,8 @@ const Home: NextPage = () => {
       flexDir="column"
       height="100vh"
     >
-      <Text fontSize="4xl" padding="10" textAlign="center">
+      <LogoComponent />
+      <Text fontSize="3xl" padding="5" textAlign="center">
         Kindly log in to use the app
       </Text>
       <Button

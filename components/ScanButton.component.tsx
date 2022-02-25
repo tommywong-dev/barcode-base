@@ -17,7 +17,9 @@ import dynamic from "next/dynamic";
 import { BarcodeData } from "../interfaces/Barcode.interface";
 import moment from "moment";
 import { createNewBarcode } from "../firebase/firestore";
-import { TIME_FORMAT } from "../constants/TIME_FORMAT";
+import useSound from "use-sound";
+
+// audios
 
 const BarcodeScannerComponent = dynamic(import("react-qr-barcode-scanner"), {
   ssr: false,
@@ -27,6 +29,8 @@ const ScanButton = () => {
   const user = useAuth();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
+  const [playSuccess] = useSound("success.wav");
+  const [playError] = useSound("error.wav");
 
   const ModalBodyInnerContent = () => {
     if (typeof window !== "undefined") {
@@ -40,6 +44,7 @@ const ScanButton = () => {
                 name: user.displayName || user.email || user.uid,
                 timestamp: moment().valueOf(),
               };
+              onClose();
 
               try {
                 await createNewBarcode(barcodeData);
@@ -49,6 +54,7 @@ const ScanButton = () => {
                   status: "success",
                   isClosable: true,
                 });
+                playSuccess();
               } catch (e: any) {
                 toast({
                   title: "Hold on!",
@@ -56,8 +62,7 @@ const ScanButton = () => {
                   status: "error",
                   isClosable: true,
                 });
-              } finally {
-                onClose();
+                playError();
               }
             }
           }}
