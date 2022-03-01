@@ -10,6 +10,7 @@
     "ios": "next build && next export && npx cap copy && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor-community/barcode-scanner": "^2.1.0",
     "@capacitor/android": "^3.4.1",
     "@capacitor/cli": "^3.4.1",
     "@capacitor/core": "^3.4.1",
