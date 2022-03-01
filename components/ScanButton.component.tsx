@@ -32,6 +32,9 @@ const ScanButton = () => {
   const [playSuccess] = useSound("success.wav");
   const [playError] = useSound("error.wav");
 
+  // guard
+  if (!user) return null;
+
   const ModalBodyInnerContent = () => {
     if (typeof window !== "undefined") {
       return (

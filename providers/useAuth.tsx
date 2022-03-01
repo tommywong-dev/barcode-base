@@ -1,32 +1,36 @@
-import { User } from "firebase/auth";
 import React, { ReactNode, useContext } from "react";
 import { createContext, useEffect, useState } from "react";
-import nookies from "nookies";
-import { auth } from "../firebase";
-
-const AuthContext = createContext({} as User);
+import {
+  AuthStateChange,
+  FirebaseAuthentication,
+} from "@robingenz/capacitor-firebase-authentication";
 
 interface Props {
   children: ReactNode;
 }
+
+const AuthContext = createContext({} as AuthStateChange["user"]);
+
 export const AuthProvider = ({ children }: Props) => {
-  const [user, setUser] = useState<User>({} as User);
+  const [user, setUser] = useState<AuthStateChange["user"]>(
+    {} as AuthStateChange["user"]
+  );
 
   useEffect(() => {
-    return auth.onIdTokenChanged(async (user) => {
-      console.log("uesr", user);
-      if (!user) {
-        setUser({} as User);
-        nookies.set(undefined, "token", "", {});
-        return;
-      }
-      const token = await user.getIdToken();
-      setUser(user);
-      nookies.set(undefined, "token", token, {});
+    (async () => {
+      const result = await FirebaseAuthentication.getCurrentUser();
+      setUser(result.user);
+    })();
+
+    FirebaseAuthentication.removeAllListeners().then(() => {
+      FirebaseAuthentication.addListener("authStateChange", (change) => {
+        setUser(change.user);
+      });
     });
   }, []);
 
   return <AuthContext.Provider value={user}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth: () => User = () => useContext(AuthContext);
+export const useAuth: () => AuthStateChange["user"] = () =>
+  useContext(AuthContext);

@@ -1,3 +1,4 @@
+import { SignInResult } from "@robingenz/capacitor-firebase-authentication";
 import { User } from "firebase/auth";
 import {
   addDoc,
@@ -11,12 +12,14 @@ import { db } from ".";
 import { BarcodeData } from "../interfaces/Barcode.interface";
 import { DbUser } from "../interfaces/DbUser.interface";
 
-export const createUser = async (user: User) => {
-  const { displayName, email, photoURL, uid } = user;
+export const createUser = async (user: SignInResult["user"]) => {
+  if (!user) throw new Error("User not found");
+
+  const { displayName, email, photoUrl, uid } = user;
   const dbUser: DbUser = {
     displayName: displayName || "",
     email: email || "",
-    photoURL: photoURL || "",
+    photoURL: photoUrl || "",
     uid,
   };
 

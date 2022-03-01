@@ -1,14 +1,15 @@
 import React from "react";
 import { Text, Box } from "@chakra-ui/react";
 
-export default function LogoComponent() {
+export default function Logo() {
   return (
     <Text variant="h2" fontWeight="bold" textColor="blue.500">
       Barcode
-      <Box display="inline" textColor="blue.700">
+      <Box as="span" display="inline" textColor="blue.700">
         Base
       </Box>
       <Box
+        as="span"
         display="inline-block"
         width={2}
         height={2}
