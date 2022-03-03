@@ -34,56 +34,6 @@ const ScanButton = () => {
   const [playSuccess] = useSound("success.wav");
   const [playError] = useSound("error.wav");
 
-  // guard
-  if (!user) return null;
-
-  const scanNatively = async () => {
-    // ask for camera permission
-    const status = await BarcodeScanner.checkPermission({ force: true });
-    if (!status.granted) {
-      toast({
-        title: "Failed Permission",
-        description: "Access to Camera Denied",
-        status: "error",
-        isClosable: true,
-      });
-    }
-
-    // scan barcode
-    await BarcodeScanner.hideBackground();
-    const result = await BarcodeScanner.startScan();
-
-    // guard
-    if (!result.hasContent || !result.content) return;
-
-    // set to Firestore
-    const barcodeData: BarcodeData = {
-      barcode: result.content,
-      name: user.displayName || user.email || user.uid,
-      timestamp: moment().valueOf(),
-    };
-    onClose();
-
-    try {
-      await createNewBarcode(barcodeData);
-      toast({
-        title: "Scanned!",
-        description: `${barcodeData.barcode} by ${barcodeData.name}`,
-        status: "success",
-        isClosable: true,
-      });
-      playSuccess();
-    } catch (e: any) {
-      toast({
-        title: "Hold on!",
-        description: e.message,
-        status: "error",
-        isClosable: true,
-      });
-      playError();
-    }
-  };
-
   const ModalBodyInnerContent = () => {
     if (Capacitor.isNativePlatform()) {
       scanNatively();
