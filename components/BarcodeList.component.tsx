@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Avatar,
   Button,
   Divider,
   HStack,
+  IconButton,
   Menu,
   MenuButton,
   MenuItem,
@@ -13,35 +14,31 @@ import {
   StatLabel,
   StatNumber,
   Text,
+  Tooltip,
   VStack,
 } from "@chakra-ui/react";
 import moment from "moment";
 import { BarcodeData } from "../interfaces/Barcode.interface";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  QueryConstraint,
-  where,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { orderBy, QueryConstraint, where } from "firebase/firestore";
 import { TIME_FORMAT } from "../constants/TIME_FORMAT";
 import { DbUser } from "../interfaces/DbUser.interface";
-import { getUsers } from "../firebase/firestore";
-import { ChevronDownIcon } from "@chakra-ui/icons";
+import { getBarcodesWith, getUsers } from "../firebase/firestore";
+import { ChevronDownIcon, RepeatIcon } from "@chakra-ui/icons";
 import { TIME_RANGE } from "../constants/TIME_RANGE";
+import { useAuth } from "../providers/useAuth";
 
 interface Filters {
   user: string;
   timeRange: string;
 }
 const BarcodeList = () => {
+  const user = useAuth();
+
   const [barcodes, setBarcodes] = useState<BarcodeData[]>([]);
   const [users, setUsers] = useState<DbUser[]>([]);
   const [selected, setSelected] = useState<Filters>({
-    user: "",
-    timeRange: TIME_RANGE.ALL_TIME,
+    user: user?.displayName || "",
+    timeRange: TIME_RANGE.TODAY,
   });
 
   const handleSelectFilter = (field: keyof Filters, value: string) => {
@@ -53,50 +50,51 @@ const BarcodeList = () => {
     setUsers(users);
   };
 
+  const getBarcodes = async () => {
+    setBarcodes([]);
+
+    // setup queries for retrieving barcodes data
+    const queryConstraints: QueryConstraint[] = [orderBy("timestamp", "desc")];
+    if (selected.user)
+      queryConstraints.push(where("name", "==", selected.user));
+
+    // get data
+    const barcodes: BarcodeData[] = await getBarcodesWith(queryConstraints);
+
+    // if user did not select time range or selected ALL TIME, just use all the barcodes
+    if (!selected.timeRange || selected.timeRange === TIME_RANGE.ALL_TIME)
+      return setBarcodes(barcodes);
+
+    // otherwise, filter them by time
+    const now = moment();
+    const filteredBarcodes = barcodes.filter((barcode) => {
+      switch (selected.timeRange) {
+        case TIME_RANGE.TODAY:
+          if (moment(barcode.timestamp).isSame(now, "day")) return true;
+          return false;
+        case TIME_RANGE.THIS_WEEK:
+          if (moment(barcode.timestamp).isSame(now, "week")) return true;
+          return false;
+        case TIME_RANGE.THIS_MONTH:
+          if (moment(barcode.timestamp).isSame(now, "month")) return true;
+          return false;
+        case TIME_RANGE.THIS_YEAR:
+          if (moment(barcode.timestamp).isSame(now, "year")) return true;
+          return false;
+        default:
+          return false;
+      }
+    });
+    setBarcodes(filteredBarcodes);
+  };
+
   useEffect(() => {
     getFilters();
   }, []);
 
   useEffect(() => {
-    const queryConstraints: QueryConstraint[] = [orderBy("timestamp", "desc")];
-    if (selected.user)
-      queryConstraints.push(where("name", "==", selected.user));
-
-    const q = query(collection(db, "barcodes"), ...queryConstraints);
-    const now = moment();
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const barcodes: BarcodeData[] = [];
-      snapshot.forEach((doc) => {
-        const barcodeData: BarcodeData = doc.data() as BarcodeData;
-        if (!selected.timeRange || selected.timeRange === TIME_RANGE.ALL_TIME)
-          return barcodes.push(barcodeData);
-
-        switch (selected.timeRange) {
-          case TIME_RANGE.TODAY:
-            if (moment(barcodeData.timestamp).isSame(now, "day"))
-              barcodes.push(barcodeData);
-            break;
-          case TIME_RANGE.THIS_WEEK:
-            if (moment(barcodeData.timestamp).isSame(now, "week"))
-              barcodes.push(barcodeData);
-            break;
-          case TIME_RANGE.THIS_MONTH:
-            if (moment(barcodeData.timestamp).isSame(now, "month"))
-              barcodes.push(barcodeData);
-            break;
-          case TIME_RANGE.THIS_YEAR:
-            if (moment(barcodeData.timestamp).isSame(now, "year"))
-              barcodes.push(barcodeData);
-            break;
-          default:
-            break;
-        }
-      });
-      setBarcodes(barcodes);
-    });
-
-    return () => unsub();
+    getBarcodes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected.user, selected.timeRange]);
 
   return (
@@ -145,7 +143,14 @@ const BarcodeList = () => {
             ))}
           </MenuList>
         </Menu>
-        <Text marginX="1rem">Results: {barcodes.length}</Text>
+
+        <Tooltip title="Refresh">
+          <IconButton
+            aria-label="refresh"
+            icon={<RepeatIcon />}
+            onClick={getBarcodes}
+          />
+        </Tooltip>
       </HStack>
 
       <VStack
@@ -156,6 +161,7 @@ const BarcodeList = () => {
         width="100%"
         className="justify-start"
       >
+        <Text>Results: {barcodes.length}</Text>
         {barcodes.length ? (
           barcodes.map(({ name, barcode, timestamp }) => (
             <Stat key={barcode}>

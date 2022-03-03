@@ -5,6 +5,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
+  QueryConstraint,
   setDoc,
 } from "firebase/firestore";
 import { db } from ".";
@@ -36,6 +38,17 @@ export const getUsers = async () => {
     users.push(doc.data() as DbUser);
   });
   return users;
+};
+
+export const getBarcodesWith = async (queryConstraints: QueryConstraint[]) => {
+  const q = query(collection(db, "barcodes"), ...queryConstraints);
+  const barcodeSnap = await getDocs(q);
+
+  const barcodes: BarcodeData[] = [];
+  barcodeSnap.forEach((doc) => {
+    barcodes.push(doc.data() as BarcodeData);
+  });
+  return barcodes;
 };
 
 export const createNewBarcode = async (barcodeData: BarcodeData) => {
