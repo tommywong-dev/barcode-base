@@ -18,8 +18,6 @@ import { BarcodeData } from "../interfaces/Barcode.interface";
 import moment from "moment";
 import { createNewBarcode } from "../firebase/firestore";
 import useSound from "use-sound";
-import { Capacitor } from "@capacitor/core";
-import { BarcodeScanner } from "@capacitor-community/barcode-scanner";
 
 // audios
 
@@ -35,10 +33,7 @@ const ScanButton = () => {
   const [playError] = useSound("error.wav");
 
   const ModalBodyInnerContent = () => {
-    if (Capacitor.isNativePlatform()) {
-      scanNatively();
-      return null;
-    } else if (typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       return (
         <BarcodeScannerComponent
           width="100%"
