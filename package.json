@@ -8,10 +8,14 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@chakra-ui/icons": "^1.1.5",
-    "@chakra-ui/react": "^1.8.3",
-    "@emotion/react": "^11.7.1",
-    "@emotion/styled": "^11.6.0",
+    "@mantine/core": "^3.6.14",
+    "@mantine/dates": "^3.6.14",
+    "@mantine/hooks": "^3.6.14",
+    "@mantine/modals": "^3.6.14",
+    "@mantine/next": "^3.6.14",
+    "@mantine/notifications": "^3.6.14",
+    "@radix-ui/react-icons": "^1.1.0",
+    "dayjs": "^1.10.8",
     "firebase": "^9.6.6",
     "framer-motion": "^6.2.6",
     "moment": "^2.29.1",

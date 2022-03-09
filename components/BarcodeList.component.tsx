@@ -1,49 +1,60 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Avatar,
-  Button,
   Divider,
-  HStack,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  Stat,
-  StatHelpText,
-  StatLabel,
-  StatNumber,
+  Group,
+  ActionIcon,
   Text,
   Tooltip,
-  VStack,
-} from "@chakra-ui/react";
+  Title,
+  Box,
+  Select,
+  TextInput,
+} from "@mantine/core";
 import moment from "moment";
 import { BarcodeData } from "../interfaces/Barcode.interface";
 import { orderBy, QueryConstraint, where } from "firebase/firestore";
 import { TIME_FORMAT } from "../constants/TIME_FORMAT";
 import { DbUser } from "../interfaces/DbUser.interface";
 import { getBarcodesWith, getUsers } from "../firebase/firestore";
-import { ChevronDownIcon, RepeatIcon } from "@chakra-ui/icons";
-import { TIME_RANGE } from "../constants/TIME_RANGE";
+import {
+  MagnifyingGlassIcon,
+  MixerHorizontalIcon,
+  ReloadIcon,
+} from "@radix-ui/react-icons";
+import { DATE_OPTION } from "../constants/DATE_OPTION";
 import { useAuth } from "../providers/useAuth";
+import { DateRangePicker } from "@mantine/dates";
+import MySelectItem from "./MySelectItem.component";
+import { useBooleanToggle, useForm } from "@mantine/hooks";
+import { motion } from "framer-motion";
 
-interface Filters {
-  user: string;
-  timeRange: string;
-}
 const BarcodeList = () => {
   const user = useAuth();
 
-  const [barcodes, setBarcodes] = useState<BarcodeData[]>([]);
-  const [users, setUsers] = useState<DbUser[]>([]);
-  const [selected, setSelected] = useState<Filters>({
-    user: user?.displayName || "",
-    timeRange: TIME_RANGE.TODAY,
+  const [showFilter, toggleFilter] = useBooleanToggle(false);
+  const searchForm = useForm({
+    initialValues: {
+      barcode: "",
+    },
+    validationRules: {
+      barcode: (value) => /^\d+$/.test(value.trim()),
+    },
+    errorMessages: {
+      barcode: "Barcode must be numeric",
+    },
   });
 
-  const handleSelectFilter = (field: keyof Filters, value: string) => {
-    setSelected({ ...selected, [field]: value });
-  };
+  const [barcodes, setBarcodes] = useState<BarcodeData[]>([]);
+  const [users, setUsers] = useState<DbUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(user.uid);
+  const [selectedDateOption, setSelectedDateOption] = useState<string | null>(
+    DATE_OPTION.TODAY
+  );
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
+    new Date(),
+    new Date(),
+  ]);
 
   const getFilters = async () => {
     const users = await getUsers();
@@ -55,37 +66,62 @@ const BarcodeList = () => {
 
     // setup queries for retrieving barcodes data
     const queryConstraints: QueryConstraint[] = [orderBy("timestamp", "desc")];
-    if (selected.user)
-      queryConstraints.push(where("name", "==", selected.user));
+
+    // filter by user
+    const selectedUserName = users.find(
+      (user) => user.uid === selectedUser
+    )?.displayName;
+    if (selectedUser && selectedUserName) {
+      queryConstraints.push(where("name", "==", selectedUserName));
+    }
+
+    // filter by time
+    switch (selectedDateOption) {
+      case DATE_OPTION.TODAY:
+        const today = moment();
+        const startOfToday = today.startOf("day").valueOf();
+        const endOfToday = today.endOf("day").valueOf();
+
+        queryConstraints.push(where("timestamp", ">=", startOfToday));
+        queryConstraints.push(where("timestamp", "<=", endOfToday));
+        break;
+      case DATE_OPTION.YESTERDAY:
+        const yesterday = moment().subtract(1, "day");
+        const startOfYesterday = yesterday.startOf("day").valueOf();
+        const endOfYesterday = yesterday.endOf("day").valueOf();
+
+        queryConstraints.push(where("timestamp", ">=", startOfYesterday));
+        queryConstraints.push(where("timestamp", "<=", endOfYesterday));
+        break;
+      case DATE_OPTION.RANGE:
+        if (!dateRange[0] || !dateRange[1]) break;
+        const startDate = dateRange[0].valueOf();
+        const endDate = moment(dateRange[1]).endOf("day").valueOf();
+
+        queryConstraints.push(where("timestamp", ">=", startDate));
+        queryConstraints.push(where("timestamp", "<=", endDate));
+        break;
+      default:
+        break;
+    }
 
     // get data
     const barcodes: BarcodeData[] = await getBarcodesWith(queryConstraints);
+    setBarcodes(barcodes);
+  };
 
-    // if user did not select time range or selected ALL TIME, just use all the barcodes
-    if (!selected.timeRange || selected.timeRange === TIME_RANGE.ALL_TIME)
-      return setBarcodes(barcodes);
+  const searchBarcode = async (values: { barcode: string }) => {
+    // trim value and clean barcodes list
+    const trimmedBarcode = values.barcode.trim();
+    setBarcodes([]);
 
-    // otherwise, filter them by time
-    const now = moment();
-    const filteredBarcodes = barcodes.filter((barcode) => {
-      switch (selected.timeRange) {
-        case TIME_RANGE.TODAY:
-          if (moment(barcode.timestamp).isSame(now, "day")) return true;
-          return false;
-        case TIME_RANGE.THIS_WEEK:
-          if (moment(barcode.timestamp).isSame(now, "week")) return true;
-          return false;
-        case TIME_RANGE.THIS_MONTH:
-          if (moment(barcode.timestamp).isSame(now, "month")) return true;
-          return false;
-        case TIME_RANGE.THIS_YEAR:
-          if (moment(barcode.timestamp).isSame(now, "year")) return true;
-          return false;
-        default:
-          return false;
-      }
-    });
-    setBarcodes(filteredBarcodes);
+    // prepare queries
+    const queryConstraints: QueryConstraint[] = [
+      where("barcode", "==", trimmedBarcode),
+    ];
+
+    const barcodes: BarcodeData[] = await getBarcodesWith(queryConstraints);
+    setBarcodes(barcodes);
   };
 
   useEffect(() => {
@@ -93,90 +129,176 @@ const BarcodeList = () => {
   }, []);
 
   useEffect(() => {
+    // do not waste resources interating when date range isn't selected
+    if (
+      selectedDateOption === DATE_OPTION.RANGE &&
+      (!dateRange[0] || !dateRange[1])
+    )
+      return;
+
     getBarcodes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected.user, selected.timeRange]);
+  }, [selectedUser, selectedDateOption, dateRange]);
 
   return (
-    <VStack align="start" width="100%">
-      <HStack padding="5">
-        <Menu>
-          <MenuButton as={Button} rightIcon={<ChevronDownIcon />}>
-            {selected.user || "Users"}
-          </MenuButton>
-          <MenuList>
-            {users.map(({ displayName, email, photoURL, uid }) => (
-              <MenuItem
-                key={uid}
-                onClick={() => handleSelectFilter("user", displayName)}
-              >
-                <Avatar mr="3" src={photoURL} name={displayName} />
-                <VStack align="start">
-                  <Text fontSize="md">{displayName}</Text>
-                  <Text fontSize="sm">{email}</Text>
-                </VStack>
-              </MenuItem>
-            ))}
-            <MenuItem onClick={() => handleSelectFilter("user", "")}>
-              All Users
-            </MenuItem>
-          </MenuList>
-        </Menu>
-        <Menu>
-          <MenuButton as={Button} rightIcon={<ChevronDownIcon />}>
-            {selected.timeRange || "Time Range"}
-          </MenuButton>
-          <MenuList>
-            {Object.keys(TIME_RANGE).map((range) => (
-              <MenuItem
-                key={range}
-                textTransform="capitalize"
-                onClick={() =>
-                  handleSelectFilter(
-                    "timeRange",
-                    TIME_RANGE[range as keyof typeof TIME_RANGE]
-                  )
+    <Group direction="column">
+      {showFilter ? (
+        <motion.div
+          style={{ width: "100%", display: showFilter ? "block" : "none" }}
+          animate={showFilter ? "open" : "close"}
+          variants={{
+            open: (height = 1000) => ({
+              clipPath: `circle(${height * 2 + 200}px at 40px 40px)`,
+              transition: {
+                type: "spring",
+                stiffness: 16,
+                restDelta: 2,
+              },
+            }),
+            closed: {
+              clipPath: "circle(30px at 40px 40px)",
+              transition: {
+                delay: 0.5,
+                type: "spring",
+                stiffness: 400,
+                damping: 40,
+              },
+            },
+          }}
+        >
+          <Group direction="column">
+            <Select
+              label="Users"
+              placeholder="Pick User"
+              itemComponent={MySelectItem}
+              sx={{ width: "100%" }}
+              data={users.map((user) => ({
+                value: user.uid,
+                image: user.photoURL,
+                label: user.displayName,
+                description: user.email,
+              }))}
+              onChange={setSelectedUser}
+              nothingFound="No Users Found"
+              filter={(value, item) =>
+                item?.label
+                  ?.toLowerCase()
+                  .includes(value.toLowerCase().trim()) ||
+                item?.description
+                  ?.toLowerCase()
+                  .includes(value.toLowerCase().trim())
+              }
+            />
+
+            <Select
+              label="Date Option"
+              placeholder="Pick Date Option"
+              data={Object.values(DATE_OPTION).map((option) => ({
+                value: option,
+                label: option,
+              }))}
+              sx={{ width: "100%" }}
+              onChange={setSelectedDateOption}
+              nothingFound="No Optinos Found"
+              filter={(value, item) =>
+                item?.label
+                  ?.toLowerCase()
+                  .includes(value.toLowerCase().trim()) ||
+                item?.description
+                  ?.toLowerCase()
+                  .includes(value.toLowerCase().trim())
+              }
+            />
+
+            {selectedDateOption === DATE_OPTION.RANGE ? (
+              <DateRangePicker
+                sx={{ width: "100%" }}
+                label="Range"
+                placeholder="Pick dates range"
+                value={dateRange}
+                onChange={setDateRange}
+              />
+            ) : null}
+
+            <Box
+              component="form"
+              onSubmit={searchForm.onSubmit(searchBarcode)}
+              sx={{ width: "100%" }}
+            >
+              <TextInput
+                label="Search"
+                placeholder="Enter Barcode Number"
+                sx={{ width: "100%" }}
+                rightSection={
+                  <ActionIcon type="submit">
+                    <MagnifyingGlassIcon />
+                  </ActionIcon>
                 }
-              >
-                {TIME_RANGE[range as keyof typeof TIME_RANGE].toLowerCase()}
-              </MenuItem>
-            ))}
-          </MenuList>
-        </Menu>
+                {...searchForm.getInputProps("barcode")}
+              />
+            </Box>
+          </Group>
+        </motion.div>
+      ) : null}
 
-        <Tooltip title="Refresh">
-          <IconButton
-            aria-label="refresh"
-            icon={<RepeatIcon />}
-            onClick={getBarcodes}
-          />
-        </Tooltip>
-      </HStack>
-
-      <VStack
-        divider={<Divider />}
-        align="start"
-        padding="5"
-        paddingBottom="24"
-        width="100%"
-        className="justify-start"
+      <Group
+        direction="column"
+        sx={{
+          padding: "5",
+          paddingBottom: "24",
+          width: "100%",
+        }}
       >
-        <Text>Results: {barcodes.length}</Text>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            width: "100%",
+          }}
+        >
+          <Text>Results: {barcodes.length}</Text>
+          <Group>
+            <Tooltip label="Filter">
+              <ActionIcon
+                variant={showFilter ? "filled" : "light"}
+                size="lg"
+                onClick={() => toggleFilter()}
+              >
+                <MixerHorizontalIcon />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Refresh">
+              <ActionIcon variant="light" size="lg" onClick={getBarcodes}>
+                <ReloadIcon />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Box>
+        <Divider sx={{ width: "100%" }} />
         {barcodes.length ? (
           barcodes.map(({ name, barcode, timestamp }) => (
-            <Stat key={barcode}>
-              <StatLabel>{name}</StatLabel>
-              <StatNumber>{barcode}</StatNumber>
-              <StatHelpText>
+            <Group
+              key={barcode}
+              direction="column"
+              spacing="xs"
+              sx={{ width: "100%" }}
+            >
+              <Text size="sm">{name}</Text>
+              <Text size="xl" weight="bold">
+                {barcode}
+              </Text>
+              <Text size="xs">
                 {moment(timestamp).format(TIME_FORMAT.VERBOSE)}
-              </StatHelpText>
-            </Stat>
+              </Text>
+              <Divider sx={{ width: "100%" }} />
+            </Group>
           ))
         ) : (
-          <Text fontSize="2xl">No Records</Text>
+          <Title order={2}>No Records</Title>
         )}
-      </VStack>
-    </VStack>
+      </Group>
+    </Group>
   );
 };
 

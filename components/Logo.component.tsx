@@ -1,21 +1,26 @@
 import React from "react";
-import { Text, Box } from "@chakra-ui/react";
+import { Text, Box, Title } from "@mantine/core";
 
 export default function LogoComponent() {
   return (
-    <Text variant="h2" fontWeight="bold" textColor="blue.500">
+    <Title
+      order={2}
+      sx={(theme) => ({ color: theme.colors.blue[4], display: "inline" })}
+    >
       Barcode
-      <Box display="inline" textColor="blue.700">
+      <Box sx={(theme) => ({ color: theme.colors.blue[7], display: "inline" })}>
         Base
       </Box>
       <Box
-        display="inline-block"
-        width={2}
-        height={2}
-        ml={0.5}
-        borderRadius="50%"
-        backgroundColor="blue.500"
+        sx={(theme) => ({
+          display: "inline-block",
+          width: 12,
+          height: 12,
+          marginLeft: 6,
+          borderRadius: "50%",
+          backgroundColor: theme.colors.blue[4],
+        })}
       />
-    </Text>
+    </Title>
   );
 }
