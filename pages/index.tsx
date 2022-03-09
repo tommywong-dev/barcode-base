@@ -1,18 +1,8 @@
-import {
-  AppShell,
-  Box,
-  Button,
-  Center,
-  Header,
-  Navbar,
-  Text,
-  Title,
-} from "@mantine/core";
+import { AppShell, Button, Center, Title } from "@mantine/core";
 import type { NextPage } from "next";
 import React from "react";
 import BarcodeList from "../components/BarcodeList.component";
 import LogoComponent from "../components/Logo.component";
-import ScanButton from "../components/ScanButton.component";
 import { signInGoogle } from "../firebase/auth";
 import { useAuth } from "../providers/useAuth";
 import HeaderComponent from "../components/Header.component";
@@ -28,7 +18,6 @@ const Home: NextPage = () => {
       className="min-h-screen"
     >
       <BarcodeList />
-      <ScanButton />
     </AppShell>
   ) : (
     <Center sx={{ flexDirection: "column", height: "100vh" }}>

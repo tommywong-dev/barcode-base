@@ -10,12 +10,17 @@ import { useNotifications } from "@mantine/notifications";
 import { useModals } from "@mantine/modals";
 
 // audios
-
 const BarcodeScannerComponent = dynamic(import("react-qr-barcode-scanner"), {
   ssr: false,
 });
 
-const ScanButton = () => {
+interface Props {
+  barcodesAppend: (...items: BarcodeData[]) => void;
+}
+
+const ScanButton = (props: Props) => {
+  const { barcodesAppend } = props;
+
   const user = useAuth();
   const notifcations = useNotifications();
   const modals = useModals();
@@ -47,6 +52,7 @@ const ScanButton = () => {
                     color: "green",
                   });
                   playSuccess();
+                  barcodesAppend(barcodeData);
                 } catch (e: any) {
                   notifcations.showNotification({
                     title: "Hold on!",
@@ -71,17 +77,18 @@ const ScanButton = () => {
       sx={{
         position: "fixed",
         width: "80%",
-        bottom: 0,
+        bottom: "1rem",
         left: "50%",
-        right: "50%",
         transform: "translateX(-50%)",
-        marginBottom: 10,
+        display: "flex",
+        justifyContent: "center",
       }}
     >
       <Button
+        fullWidth
         variant="gradient"
         gradient={{ from: "indigo", to: "cyan" }}
-        fullWidth
+        sx={{ maxWidth: 500 }}
         onClick={handleScan}
       >
         Scan
