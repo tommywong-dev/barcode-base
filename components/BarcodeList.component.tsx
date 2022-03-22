@@ -25,7 +25,7 @@ import {
 } from "@radix-ui/react-icons";
 import { DATE_OPTION } from "../constants/DATE_OPTION";
 import { useAuth } from "../providers/useAuth";
-import { DateRangePicker } from "@mantine/dates";
+import { DatePicker, DateRangePicker } from "@mantine/dates";
 import MySelectItem from "./MySelectItem.component";
 import { useBooleanToggle, useForm, useListState } from "@mantine/hooks";
 import { motion } from "framer-motion";
@@ -39,12 +39,6 @@ const BarcodeList = () => {
     initialValues: {
       barcode: "",
     },
-    validationRules: {
-      barcode: (value) => /^\d+$/.test(value.trim()),
-    },
-    errorMessages: {
-      barcode: "Barcode must be numeric",
-    },
   });
 
   const [barcodes, barcodesHandler] = useListState<BarcodeData>([]);
@@ -53,6 +47,7 @@ const BarcodeList = () => {
   const [selectedDateOption, setSelectedDateOption] = useState<string | null>(
     DATE_OPTION.TODAY
   );
+  const [date, setDate] = useState<Date | null>(new Date());
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
     new Date(),
     new Date(),
@@ -83,23 +78,34 @@ const BarcodeList = () => {
         const today = moment();
         const startOfToday = today.startOf("day").valueOf();
         const endOfToday = today.endOf("day").valueOf();
-
         queryConstraints.push(where("timestamp", ">=", startOfToday));
         queryConstraints.push(where("timestamp", "<=", endOfToday));
         break;
+
       case DATE_OPTION.YESTERDAY:
         const yesterday = moment().subtract(1, "day");
         const startOfYesterday = yesterday.startOf("day").valueOf();
         const endOfYesterday = yesterday.endOf("day").valueOf();
-
         queryConstraints.push(where("timestamp", ">=", startOfYesterday));
         queryConstraints.push(where("timestamp", "<=", endOfYesterday));
         break;
+
+      case DATE_OPTION.A_DAY:
+        if (!date) break;
+        console.log(
+          "🚀 ~ file: BarcodeList.component.tsx ~ line 95 ~ getBarcodes ~ date",
+          date
+        );
+        const startOfDate = moment(date).startOf("day").valueOf();
+        const endOfDate = moment(date).endOf("day").valueOf();
+        queryConstraints.push(where("timestamp", ">=", startOfDate));
+        queryConstraints.push(where("timestamp", "<=", endOfDate));
+        break;
+
       case DATE_OPTION.RANGE:
         if (!dateRange[0] || !dateRange[1]) break;
         const startDate = dateRange[0].valueOf();
         const endDate = moment(dateRange[1]).endOf("day").valueOf();
-
         queryConstraints.push(where("timestamp", ">=", startDate));
         queryConstraints.push(where("timestamp", "<=", endDate));
         break;
@@ -140,7 +146,7 @@ const BarcodeList = () => {
 
     getBarcodes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUser, selectedDateOption, dateRange]);
+  }, [selectedUser, selectedDateOption, date, dateRange]);
 
   return (
     <Group direction="column">
@@ -224,6 +230,18 @@ const BarcodeList = () => {
                   placeholder="Pick dates range"
                   value={dateRange}
                   onChange={setDateRange}
+                />
+              </Grid.Col>
+            ) : null}
+
+            {selectedDateOption === DATE_OPTION.A_DAY ? (
+              <Grid.Col xs={12} md={6} lg={4} xl={3}>
+                <DatePicker
+                  sx={{ width: "100%" }}
+                  label="Date"
+                  placeholder="Pick a date"
+                  value={date}
+                  onChange={setDate}
                 />
               </Grid.Col>
             ) : null}
